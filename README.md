@@ -40,7 +40,7 @@ El sistema está compuesto por los siguientes módulos:
 
 2. Instala las dependencias:
    ```bash
-   pip install pygame speechrecognition pyttsx3
+   pip install pygame gTTS SpeechRecognition requests PyAudio
    ```
 
 3. Ejecuta el sistema:
