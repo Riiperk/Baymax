@@ -37,13 +37,31 @@ El sistema está compuesto por los siguientes módulos:
    git clone https://github.com/tu-usuario/proyecto_bayx.git
    cd proyecto_bayx
    ```
+2. Crear entorno Virtual ENV
+   ```bash
+   pip install virtualenv #Instala virtual ENV
+   virtualenv env # Crea el entorno Virtual
+   ./env/Scripts/activate #Lo activa
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser # ESTE COMANDO POR SI LE MOLESTA LAS EXCEPCIONES Y LE TIRA ERROR DE SCRIPTS / ESTE COMANDO SOLO FUNCIONA POR SESIÓN
+   
+   ```
 
-2. Instala las dependencias:
+
+3. Instala las dependencias:
    ```bash
    pip install pygame gTTS SpeechRecognition requests PyAudio
    ```
+4. **Instalación del Motor de IA Generativa (Requisito para charla natural):**
+   Bayx utiliza un modelo de lenguaje local para garantizar la privacidad y mantener su personalidad cuando no está dando diagnósticos médicos.
+   - Descarga e instala [Ollama](https://ollama.com/).
+   - Abre una nueva terminal y ejecuta el siguiente comando para descargar el modelo neuronal:
+     ```bash
+     ollama run phi3
+     ```
+   - Asegúrate de que Ollama esté ejecutándose en segundo plano (puerto `localhost:11434`) antes de iniciar `main.py`.
 
-3. Ejecuta el sistema:
+
+5. Ejecuta el sistema:
    ```bash
    python main.py
    ```
@@ -57,6 +75,11 @@ El sistema está compuesto por los siguientes módulos:
 
 ## Funcionalidades Médicas
 
+### Monitoreo Químico-Emocional
+- **Escaneo Semántico:** Detección en tiempo real del estado de ánimo del paciente a través del procesamiento de lenguaje natural.
+- **Categorización:** Identificación automática de estados de Ansiedad, Tristeza, Alegría o Neutralidad.
+- **Registro Clínico:** Inclusión del estado emocional en el reporte final `.txt` generado por el módulo de memoria.
+
 ### Evaluación de Síntomas
 - Clasificación por niveles de urgencia (Rojo, Amarillo, Verde)
 - Protocolos específicos para diferentes sistemas corporales
@@ -68,6 +91,21 @@ El sistema está compuesto por los siguientes módulos:
 - Gastrointestinal
 - Musculoesquelético
 - Sensorial (vista, oído)
+
+## Protocolos Cinematográficos (Easter Eggs)
+
+Para mantener la esencia del personaje de San Fransokyo, el sistema cuenta con comandos ocultos que activan respuestas y comportamientos icónicos:
+- **"Bebé Peludo" / "Gato":** Activa el protocolo de reducción de estrés mediante frecuencias de ronroneo.
+- **"Chocar los puños":** Secuencia de interacción social de dos pasos que culmina con el icónico sonido "¡Balalala!".
+- **"Dame un abrazo":** Activa el protocolo de soporte físico para la liberación de oxitocina.
+- **"Batería baja":** Reacción a niveles bajos de energía del sistema.
+- **Escena de la Pubertad:** Respuesta automática inofensiva si el paciente reporta un nivel de dolor de 0 o 1 tras un diagnóstico.
+
+## Optimizaciones de Hardware
+
+- **Memoria Acústica Hash MD5:** Sistema de caché local (`audio_cache/`) que guarda las frases sintetizadas por Google (gTTS). Evita latencia y ahorra consumo de red al reutilizar audios instantáneamente.
+- **Blindaje BytesIO:** Corrección de grado industrial para motores Pygame, evitando crasheos por etiquetas MP3 corruptas (bad tags) provenientes de la nube.
+- **Ducking Dinámico:** Gestión inteligente de los 8 canales físicos de audio. La musicoterapia fluye al 100% de volumen y solo se atenúa (5%) de manera elegante cuando Bayx emite un diagnóstico vocal.
 
 ## Configuración
 
