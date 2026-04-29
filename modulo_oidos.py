@@ -1,102 +1,77 @@
+# Whisper nos sirve para usar a Baymax en modo offline, sin necesidad de conexión a internet. Tambien funciona mejor que GTTS
 import speech_recognition as sr
+import numpy as np
 import sys
-import time
+from faster_whisper import WhisperModel
 
-# =================================================================
-# 1. DIAGNÓSTICO Y CALIBRACIÓN DE SENSORES
-# =================================================================
+print("🧠 [OIDOS]: Cargando modelo Whisper...")
+try:
+    modelo_whisper = WhisperModel("small", device="cpu", compute_type="int8")
+    print("✅ [OIDOS]: Whisper listo. Modo offline activado.")
+except Exception as e:
+    print(f"❌ [OIDOS - ERROR FATAL]: {e}")
+    sys.exit(1)
+
+recognizer = sr.Recognizer()
+recognizer.pause_threshold = 1.0
+recognizer.non_speaking_duration = 0.5
+recognizer.dynamic_energy_threshold = False
+
 def inicializar_sensores():
-    """
-    Realiza un escaneo profundo del hardware de audio para asegurar 
-    su operatividad antes de arrancar el núcleo del sistema.
-    """
     print("🔌 [Escaneando hardware de entrada de audio...]")
     try:
         mics = sr.Microphone.list_microphone_names()
         if not mics:
-            print("❌ [ERROR CRÍTICO] No se detectó hardware de captura.")
-            print("💡 Sugerencia: Revisa la conexión del micrófono y permisos de Windows.")
+            print("❌ [ERROR CRÍTICO] No se detectó micrófono.")
             sys.exit(1)
-        
-        print(f"✅ [Sensor detectado: {mics[0][:40]}...]")
+        print(f"✅ [Sensor detectado: {mics[0][:50]}...]")
     except Exception as e:
         print(f"❌ [Falla de hardware]: {e}")
         sys.exit(1)
 
-# Ejecutamos la inicialización al cargar el módulo
 inicializar_sensores()
 
-# =================================================================
-# 2. NÚCLEO DE PROCESAMIENTO ACÚSTICO (Configuración Estática)
-# =================================================================
-recognizer = sr.Recognizer()
-
-# --- AJUSTES DE PRECISIÓN CLÍNICA ---
-# Tiempo de silencio para considerar fin de frase (1.0s permite pausas naturales)
-recognizer.pause_threshold = 1.0 
-
-# Margen de seguridad para capturar el inicio y final de las palabras completas
-recognizer.non_speaking_duration = 0.5
-
-# 🚀 INNOVACIÓN ANTI-ECO: Apagamos el ajuste dinámico (False). 
-# Si lo dejamos encendido, el micrófono se vuelve loco tratando de 
-# ajustarse a los bajos y agudos de la música. Lo forzamos a estático.
-recognizer.dynamic_energy_threshold = False 
-
-# =================================================================
-# 3. FUNCIÓN MAESTRA DE ESCUCHA (Con Sordera Selectiva)
-# =================================================================
-def escuchar(duracion_maxima=10, musica_activa=False): 
-    """
-    Captura la voz del usuario. 
-    Si 'musica_activa' es True, baja drásticamente la sensibilidad del
-    micrófono para que Bayx ignore la música y solo escuche tu voz.
-    """
-    print("\n   [ 👂 Bayx ajustando sensores y escuchando... ]")
+def escuchar(duracion_maxima=10, musica_activa=False):
+    print("\n   [ 👂 Bayx escuchando con Whisper... ]")
     
+    if musica_activa:
+        recognizer.energy_threshold = 1500
+    else:
+        recognizer.energy_threshold = 300
+
     try:
-        with sr.Microphone() as source:
-            
-            # --- FILTRO DE AISLAMIENTO ACÚSTICO ---
-            # Dependiendo de si hay música o no, cambiamos la "dureza" del oído.
-            if musica_activa:
-                # El oído se vuelve 'sordo' a los ruidos menores a 1500 de energía.
-                # La música de fondo (que atenuaremos en el main) no pasará de 500.
-                # Solo tu voz directa, hablando hacia el micrófono, pasará este filtro.
-                recognizer.energy_threshold = 1500 
-            else:
-                # Sensibilidad normal para una habitación en silencio (escucha hasta susurros)
-                recognizer.energy_threshold = 300  
-            
+        with sr.Microphone(sample_rate=16000) as source:
             try:
-                # Captura de la señal de audio
                 audio = recognizer.listen(
-                    source, 
-                    timeout=5.0, # Tiempo máximo de espera a que empieces a hablar
-                    phrase_time_limit=duracion_maxima # Límite de la frase completa
+                    source,
+                    timeout=5.0,
+                    phrase_time_limit=duracion_maxima
                 )
                 
-                print("   [ 🌐 Procesando paquete acústico en la nube... ]")
+                print("   [ 🧠 Procesando con Whisper offline... ]")
                 
-                # Traducción a texto (Usamos es-CO para mayor precisión del acento local)
-                texto = recognizer.recognize_google(audio, language="es-CO")
-                return texto.lower().strip()
+                # Convertimos el audio a números que Whisper entiende
+                # Sin ffmpeg, directo en RAM
+                wav_data = audio.get_wav_data()
+                audio_np = np.frombuffer(wav_data, dtype=np.int16).astype(np.float32) / 32768.0
+                
+                segmentos, _ = modelo_whisper.transcribe(
+                    audio_np,
+                    language="es",
+                    initial_prompt="Síntomas médicos: me duele el brazo, tengo fiebre, Bayx"
+                )
+                
+                texto = " ".join([s.text for s in segmentos]).strip()
+                if texto:
+                    return texto.lower()
+                return ""
                 
             except sr.WaitTimeoutError:
-                # El usuario no habló en los 5 segundos de timeout
-                return "" 
-                
-            except sr.UnknownValueError:
-                # Se detectó un ruido que superó el umbral de energía, 
-                # pero no era lenguaje coherente (Ej. un pico fuerte de la canción)
+                return ""
+            except Exception as e:
+                print(f"   [ ❌ Error de transcripción: {e} ]")
                 return ""
                 
-            except sr.RequestError as e:
-                # Fallo en la conexión con los servidores de Google
-                print(f"   [ ❌ Error de enlace de datos: {e} ]")
-                return ""
-                
-    except Exception as e_acustico:
-        # Fallo general del bus de audio (Micrófono desconectado en pleno uso)
-        print(f"❌ [Falla en el bus de datos acústicos: {e_acustico}]")
+    except Exception as e:
+        print(f"❌ [Falla en el micrófono: {e}]")
         return ""

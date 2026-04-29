@@ -58,7 +58,11 @@ PALABRA_CLAVE = "bayx"
 
 # Protocolos de Desactivación Oficial
 PATRONES_CIERRE = [
-    "estoy satisfecho con mi cuidado", "estoy satisfecho", "toy satisfecho", 
+    "estoy satisfecho con mi cuidado", "estoy satisfecha con mi cuidado",
+    "estoy satisfecho con tu cuidado", "estoy satisfecha con tu cuidado",
+    "estoy satisfecho", "estoy satisfecha",
+    "toy satisfecho", "toy satisfecha",
+    "satisfecho con", "satisfecha con",
     "ya estoy bien", "puedes irte", "desconectate", "apagate", "chau bayx"
 ]
 

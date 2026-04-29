@@ -3,8 +3,6 @@
 # ==============================================================================
 # Este es el núcleo del sistema. Coordina hilos de ejecución para el rostro,
 # el sensor de voz y los actuadores de audio de forma sincronizada.
-# INNOVACIÓN V19.2: Se eliminó el Ducking durante la fase de escucha para 
-# no interrumpir la experiencia de musicoterapia del paciente.
 # ==============================================================================
 
 import time
@@ -14,7 +12,7 @@ import os     # Protocolos de acceso al sistema de archivos y ejecución de repo
 import pygame # Gestión de estados de hardware y hilos de audio secundarios
 
 # ==============================================================================
-# 1. INTEGRACIÓN DE LA ARQUITECTURA MODULAR INTEGRAL (v19.2)
+# 1. INTEGRACIÓN DE LA ARQUITECTURA MODULAR INTEGRAL 
 # ==============================================================================
 # Intentamos vincular todos los módulos del proyecto.
 # Si alguno falta, el sistema detendrá el arranque para evitar daños lógicos.
@@ -26,7 +24,7 @@ try:
         detener_todo_audio, 
         atenuar_musica
     )
-    # Cargamos el sensor acústico con filtrado dinámico de eco y sordera selectiva
+    # sor acústico con filtrado dinámico de eco y sordera selectiva
     from modulo_oidos import escuchar
     # Cargamos el córtex de decisión con todos sus atributos de estado cinematográficos
     from modulo_cerebro import procesar_pensamiento, EstadoSesion
