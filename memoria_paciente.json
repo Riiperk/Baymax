@@ -1,17 +1,17 @@
 {
     "nombre": "Paciente",
-    "ultimo_sintoma": "cabeza",
+    "ultimo_sintoma": "brazo",
     "temas_hablados": [
         "siento",
-        "choca",
-        "punos",
-        "dame",
-        "puno",
-        "choque",
-        "peludo",
-        "satisfecha",
-        "cuyao",
-        "cuidado"
+        "bien",
+        "interesante",
+        "puedes",
+        "hacer",
+        "hola",
+        "noooo",
+        "estas",
+        "algo",
+        "cuentame"
     ],
-    "sesiones_completadas": 12
+    "sesiones_completadas": 17
 }

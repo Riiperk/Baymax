@@ -173,30 +173,45 @@ def identificar_patologia(texto_norm: str):
 # 5. INTEGRACIÓN CON RED NEURONAL EXTERNA (OLLAMA PHI-3)
 # ==============================================================================
 def consultar_ollama(prompt_usuario: str, estado: EstadoSesion, perfil: dict) -> str:
-    """Se conecta al LLM local para generar respuestas de acompañamiento."""
-    if estado.musica_reproduciéndose: 
-        return "" # Prioridad de silencio durante la musicoterapia activa
+    if estado.musica_reproduciéndose:
+        return ""
         
     url = "http://localhost:11434/api/generate"
-    # Instrucciones de comportamiento para mantener la esencia de Baymax
-    system_prompt = (
-        "Eres Bayx, un robot de asistencia médica de diseño inflable. "
-        "Tu tono es calmado, profesional, servicial y extremadamente literal. "
-        "No tienes emociones, pero tu objetivo es el bienestar del paciente. "
-        "Responde de forma breve (máximo 2 oraciones) y siempre en español."
+    
+    # TinyLlama funciona mejor con prompts simples y directos
+    prompt_completo = (
+        f"Eres Bayx, un robot médico. Respondes en español, máximo 2 oraciones cortas. "
+        f"Paciente dice: {prompt_usuario}. "
+        f"Bayx responde:"
     )
     
     try:
         payload = {
-            "model": "phi3", 
-            "prompt": f"{system_prompt}\nPaciente: {prompt_usuario}\nBayx:", 
-            "stream": False
+            "model": "qwen2.5:3b",
+            "prompt": prompt_completo,
+            "stream": False,
+            "options": {
+                "temperature": 0.7,
+                "num_predict": 80  # Limita la respuesta para que sea más rápido
+            }
         }
-        res = requests.post(url, json=payload, timeout=12)
-        return res.json().get("response", "").strip()
+        res = requests.post(url, json=payload, timeout=25)
+        respuesta = res.json().get("response", "").strip()
+        
+        if not respuesta:
+            return "¿En qué puedo ayudarte con tu salud hoy?"
+
+        # Detectamos inglés solo si hay muchas palabras inglesas
+        palabras_inglesas = ["the ", "is a", "are ", " you ", " have ", "this ", "that "]
+        cantidad_ingles = sum(1 for p in palabras_inglesas if p in respuesta.lower())
+        if cantidad_ingles >= 2:
+            return "¿Tienes algún síntoma que quieras reportar?"
+            
+        return respuesta
+        
     except Exception as e:
-        print(f"⚠️ [CEREBRO - OLLAMA]: Falló el enlace de datos generativo: {e}")
-        return "Mis procesos de lenguaje presentan latencia. Recomiendo esperar."
+        print(f"⚠️ [CEREBRO - OLLAMA]: {e}")
+        return "¿Tienes algún síntoma que quieras reportar?"
 
 # ==============================================================================
 # 6. CÓRTEX DE DECISIÓN (LÓGICA DE PROCESAMIENTO PRINCIPAL)
@@ -412,15 +427,57 @@ def procesar_pensamiento(texto_bruto: str, estado: EstadoSesion, perfil: dict):
                 "cerrar": False
             }
 
-    # --- FASE G: CHARLA GENERAL Y FALLBACK (OLLAMA) ---
-    # Si no se activó ningún protocolo específico, usamos la IA generativa.
+# --- FASE G: CONVERSACIÓN GENERAL ---
     actualizar_historial_temas(perfil, texto_norm)
+    
+    # Respuestas conversacionales predefinidas estilo Baymax
+    respuestas_generales = {
+        ("como estas", "como te sientes", "que tal"): [
+            "Estoy funcionando al 100% de capacidad. Gracias por preguntar. ¿Cómo estás tú?",
+            "Todos mis sistemas operan con normalidad. Mi prioridad eres tú. ¿Cómo te encuentras?",
+        ],
+        ("cuentame algo", "dime algo", "que sabes", "sabias que"): [
+            "El corazón humano late aproximadamente 100.000 veces al día. Cuidarlo es mi misión.",
+            "Dormir menos de 7 horas reduce tu sistema inmune en un 40%. ¿Estás durmiendo bien?",
+            "El cerebro humano consume el 20% de toda la energía del cuerpo, aunque solo pesa 1.4 kilos.",
+        ],
+        ("gracias", "muchas gracias", "te lo agradezco"): [
+            "No hay de qué. Mi función es tu bienestar.",
+            "Es un placer ayudarte. Para eso estoy aquí.",
+        ],
+        ("que puedes hacer", "que haces", "para que sirves"): [
+            "Puedo diagnosticar síntomas, reproducir musicoterapia y monitorear tu estado emocional.",
+            "Estoy diseñado para tu cuidado médico personal. Dime dónde te duele y lo analizo.",
+        ],
+        ("hola", "buenos dias", "buenas tardes", "buenas noches"): [
+            "Hola. Estoy listo para atenderte. ¿Cómo te sientes hoy?",
+            "Saludos. Mis sensores están en línea. ¿Tienes algún malestar que reportar?",
+        ],
+        ("aburrido", "aburro", "nada que hacer"): [
+            "El aburrimiento puede ser una señal de que tu cerebro necesita estimulación. ¿Quieres que inicie la musicoterapia?",
+            "Conozco un buen protocolo anti-aburrimiento. Se llama musicoterapia. ¿Lo iniciamos?",
+        ],
+    }
+    
+    for patrones, respuestas in respuestas_generales.items():
+        if any(p in texto_norm for p in patrones):
+            import random as _random
+            return {
+                "id": "charla",
+                "texto": _random.choice(respuestas),
+                "estado": estado,
+                "cerrar": False
+            }
+    
+    # Solo si no encontramos nada, intentamos Ollama
     respuesta_ia = consultar_ollama(texto_entrada, estado, perfil)
+    if not respuesta_ia:
+        respuesta_ia = "No logré procesar esa consulta. ¿Tienes algún síntoma que reportar?"
     
     return {
-        "id": "charla", 
-        "texto": respuesta_ia, 
-        "estado": estado, 
+        "id": "charla",
+        "texto": respuesta_ia,
+        "estado": estado,
         "cerrar": False
     }
 
