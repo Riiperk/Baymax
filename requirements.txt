@@ -1,0 +1,11 @@
+# === AUDIO Y VOZ ===
+pygame==2.5.2
+pyttsx3==2.90          # TTS offline (reemplaza gTTS)
+openai-whisper==20231117   # STT offline (reemplaza Google)
+
+# === PROCESAMIENTO ===
+SpeechRecognition==3.10.0
+requests==2.31.0
+
+# === UTILIDADES ===
+PyAudio==0.2.14

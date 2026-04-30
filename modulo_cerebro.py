@@ -3,6 +3,9 @@ import requests
 import difflib
 import time
 import random
+import spacy
+nlp = spacy.load("es_core_news_md")
+print("✅ [CEREBRO]: Modelo de lenguaje spaCy cargado.")
 from dataclasses import dataclass, field
 
 # ==============================================================================
@@ -138,14 +141,30 @@ def extraer_escala_dolor(texto: str) -> int:
 
 def identificar_patologia(texto_norm: str):
     """
-    Realiza una búsqueda profunda en la matriz médica.
-    Retorna: (termino_encontrado, categoria_maestra_en_mayusculas)
+    Ahora usa dos niveles de búsqueda:
+    1. Exacta: busca la palabra directamente (rápido)
+    2. Semántica: usa spaCy para entender sinónimos y conjugaciones
+       Ejemplo: "doliendo" → "doler" → encuentra "dolor"
     """
+    # Nivel 1: búsqueda exacta (igual que antes)
     for grupo_sinonimos, respuesta in PROTOCOLOS_MAESTROS.items():
         for sinonimo in grupo_sinonimos:
             if sinonimo in texto_norm:
-                # La categoría es el primer término del grupo (identificador principal)
                 return sinonimo, grupo_sinonimos[0].upper()
+
+    # Nivel 2: búsqueda con spaCy (nueva)
+    # Convertimos el texto a sus formas base (lemas)
+    # Ejemplo: "brazos doliendo" → ["brazo", "doler"]
+    doc = nlp(texto_norm)
+    lemas_texto = [token.lemma_ for token in doc if not token.is_stop and len(token.text) > 2]
+
+    for grupo_sinonimos, respuesta in PROTOCOLOS_MAESTROS.items():
+        for sinonimo in grupo_sinonimos:
+            doc_sinonimo = nlp(sinonimo)
+            lemas_sinonimo = [token.lemma_ for token in doc_sinonimo]
+            if any(lema in lemas_texto for lema in lemas_sinonimo):
+                return sinonimo, grupo_sinonimos[0].upper()
+
     return None, None
 
 # ==============================================================================
