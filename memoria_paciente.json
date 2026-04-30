@@ -1,6 +1,6 @@
 {
     "nombre": "Paciente",
-    "ultimo_sintoma": "brazo",
+    "ultimo_sintoma": "abdomen",
     "temas_hablados": [
         "siento",
         "bien",
@@ -13,5 +13,5 @@
         "algo",
         "cuentame"
     ],
-    "sesiones_completadas": 17
+    "sesiones_completadas": 20
 }

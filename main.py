@@ -218,4 +218,4 @@ if __name__ == "__main__":
     try:
         arrancar_bayx()
     except Exception as e_arranque:
-        print(f"❌ [FALLO DE ARRANQUE]: {e_arranque}")
+        print(f"❌ [FALLO DE ARRANQUE]: {e_arranque}")  
