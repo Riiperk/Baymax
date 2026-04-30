@@ -385,20 +385,32 @@ def procesar_pensamiento(texto_bruto: str, estado: EstadoSesion, perfil: dict):
     sintoma, categoria = identificar_patologia(texto_norm)
     if sintoma:
         estado.sintoma_actual = sintoma
-        estado.categoria_actual = categoria  # <--- GUARDADO PARA EL REPORTE FINAL
+        estado.categoria_actual = categoria
         estado.esperando_seguimiento = True
         estado.indice_pregunta = 0
         
-        # Persistencia en el perfil JSON del usuario
         perfil["ultimo_sintoma"] = sintoma
         guardar_perfil(perfil)
         
-        return {
-            "id": "pedir_escala", 
-            "texto": f"He detectado una anomalía en su {sintoma}. En una escala del uno al diez, ¿cómo calificarías tu dolor?", 
-            "estado": estado, 
-            "cerrar": False
-        }
+        # Primera pregunta de seguimiento antes de pedir la escala
+        primera_pregunta = obtener_pregunta_seguimiento(sintoma, 0)
+        if primera_pregunta:
+            estado.indice_pregunta = 1
+            return {
+                "id": "pedir_seguimiento",
+                "texto": f"He detectado una anomalía en tu {sintoma}. {primera_pregunta}",
+                "estado": estado,
+                "cerrar": False
+            }
+        else:
+            estado.esperando_seguimiento = False
+            estado.esperando_escala = True
+            return {
+                "id": "pedir_escala",
+                "texto": f"He detectado una anomalía en tu {sintoma}. En una escala del uno al diez, ¿cómo calificarías tu dolor?",
+                "estado": estado,
+                "cerrar": False
+            }
 
     # --- FASE G: CHARLA GENERAL Y FALLBACK (OLLAMA) ---
     # Si no se activó ningún protocolo específico, usamos la IA generativa.
