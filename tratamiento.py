@@ -1,125 +1,255 @@
 # ==============================================================================
-# TRATAMIENTO.PY - CÓRTEX MÉDICO DE ALTA CAPACIDAD (V17.0 - ULTIMATE)
-# ==============================================================================
-# Módulo de Inteligencia Clínica de Bayx. 
-# Contiene más de 100 alias anatómicos, protocolos de estabilización física 
-# y emocional, y un nuevo motor de evaluación de Triage (Nivel de Urgencia).
+# TRATAMIENTO.PY - CÓRTEX MÉDICO (V20.0 - CON PREGUNTAS DE SEGUIMIENTO)
 # ==============================================================================
 
-# ------------------------------------------------------------------------------
-# 1. MATRIZ DE RIESGOS Y TRIAGE MÉDICO
-# ------------------------------------------------------------------------------
-# Innovación: Bayx ahora sabe cuándo un dolor es un simple malestar (Verde)
-# y cuándo debe ordenar al paciente ir a urgencias inmediatamente (Rojo).
-SINTOMAS_CRITICOS_ROJOS = ["corazon", "infarto", "pecho", "desmayo", "sangre", "ahogo", "respirar"]
-SINTOMAS_CUIDADO_AMARILLO = ["fiebre", "fractura", "quemadura", "asma", "vision", "ceguera", "apendicitis"]
+SINTOMAS_CRITICOS_ROJOS = [
+    "corazon", "infarto", "pecho", "desmayo", "sangre", "ahogo", 
+    "respirar", "convulsion", "paralisis", "derrame"
+]
+SINTOMAS_CUIDADO_AMARILLO = [
+    "fiebre", "fractura", "quemadura", "asma", "vision", 
+    "ceguera", "apendicitis", "vomito", "diarrea"
+]
 
-# ------------------------------------------------------------------------------
-# 2. BASE DE DATOS DE PROTOCOLOS MAESTROS (Nivel San Fransokyo)
-# ------------------------------------------------------------------------------
+# Cada protocolo ahora tiene:
+# - "preguntas": lista de preguntas de seguimiento
+# - "respuesta_base": diagnóstico general
+# - "respuestas_detalle": respuestas según lo que diga el paciente
 PROTOCOLOS_MAESTROS = {
-    # --- ZONA NEUROLÓGICA Y CABEZA ---
-    ("cabeza", "migraña", "jaqueca", "sienes", "nuca", "cefalea", "cerebro", "mareo", "vertigo"): 
-        "He detectado una anomalía neurológica o cefalea. Se recomienda reposo inmediato en un área con baja iluminación. Aplica una compresa fría en la zona frontal. La hidratación constante es obligatoria para tu recuperación.",
-        
-    ("ojo", "ojos", "vista", "vision", "ardor", "ceguera", "parpado"):
-        "Tus escáneres oculares indican fatiga visual severa o irritación. Es un síntoma común tras la sobreexposición a pantallas azules. Sugiero la regla 20-20-20: cada 20 minutos, mira a 20 pies de distancia por 20 segundos.",
-        
-    ("oido", "oidos", "oreja", "orejas", "zumbido", "sordera", "tinnitus"):
-        "Mis sensores de presión indican inflamación o bloqueo en el canal auditivo. Por favor, no introduzcas ningún objeto en tu oído. Si el dolor es punzante, requieres una revisión endoscópica con un especialista.",
-        
-    ("diente", "dientes", "muela", "boca", "encias", "mandibula", "caries"):
-        "He detectado inflamación periodontal o dolor dental agudo. Se recomienda realizar un enjuague con agua tibia salina para reducir la carga bacteriana bacteriana. Debes agendar una cita odontológica a la brevedad.",
-
-    # --- ZONA TORÁCICA, CARDÍACA Y RESPIRATORIA ---
-    ("pecho", "corazon", "taquicardia", "palpitacion", "arritmia", "infarto", "punzada"): 
-        "Alerta: Opresión torácica detectada. Detén cualquier actividad física. Respira profunda y lentamente. Si el dolor es aplastante y se irradia hacia tu brazo izquierdo o mandíbula, es una emergencia médica de Nivel Rojo.",
-        
-    ("tos", "mocos", "garganta", "gripe", "gripa", "resfriado", "congestion", "flemas", "asma", "ahogo", "respirar"): 
-        "Diagnóstico de vías respiratorias: Posible infección viral o reacción asmática. Se recomienda descanso en cama, consumo de líquidos tibios, terapia de vitamina C y mantener tu temperatura corporal estable.",
-
-    # --- ZONA GASTROINTESTINAL Y ABDOMINAL ---
-    ("estomago", "barriga", "panza", "nausea", "vomito", "colico", "abdomen", "indigestion", "diarrea", "gastritis"): 
-        "El escáner digestivo indica una alteración gastrointestinal aguda. El protocolo exige una estricta dieta blanda (BRAT: plátano, arroz, puré de manzana, pan tostado). Bebe suero oral para evitar la deshidratación.",
-        
-    ("apendice", "apendicitis", "ombligo", "punzada", "ingle"):
-        "Atención: Si el dolor se localiza en la parte inferior derecha de tu abdomen y es punzante, existe riesgo de apendicitis. No consumas analgésicos y acude a urgencias inmediatamente para evitar una peritonitis.",
-
-    # --- SISTEMA MUSCULOESQUELÉTICO Y COLUMNA ---
-    ("cuello", "espalda", "lumbar", "columna", "cervical", "torticolis", "ciatica", "postura"):
-        "Tus niveles de tensión muscular en la región dorsal son críticos. Esto suele derivar de posturas asimétricas al estudiar o programar. Sugiero aplicar termoterapia (calor local) por 15 minutos y realizar estiramientos controlados.",
-
-    ("brazo", "brazos", "muñeca", "codo", "hombro", "mano", "dedo", "dedos", "antebrazo"): 
-        "Escaneo de extremidad superior completado. Se detecta daño tisular o articular. Protocolo RICE activado: Reposo, Hielo (Ice), Compresión y Elevación. Aplica frío por 10 minutos para mitigar la hinchazón.",
-        
-    ("pierna", "piernas", "rodilla", "tobillo", "pie", "pies", "muslo", "gemelo", "calambre", "desgarre"): 
-        "Tensión estructural detectada en extremidades inferiores. Tus niveles de ácido láctico podrían estar elevados. Se recomienda mantener la extremidad elevada, suspender actividad física y aplicar masajes con pomada antiinflamatoria.",
-
-    # --- TRAUMATISMOS, HERIDAS Y DERMATOLOGÍA ---
-    ("golpe", "caida", "caída", "hueso", "musculo", "herida", "moreton", "esguince", "corte", "sangre", "fractura"): 
-        "Traumatismo físico confirmado. Si hay sangrado activo, aplica presión directa y constante con un apósito estéril. Si sospechas de fisura ósea, inmoviliza el área por completo y busca atención de traumatología.",
-        
-    ("piel", "alergia", "picazon", "sarpullido", "ronchas", "quemadura", "ardor", "picadura"):
-        "Reacción dérmica detectada. Lava el área afectada con abundante agua fresca y jabón de pH neutro. Por favor, evita rascarte bajo cualquier circunstancia para prevenir infecciones por estafilococos.",
-
-    # --- SISTÉMICO, METABÓLICO Y SUEÑO ---
-    ("fiebre", "escalofrio", "caliente", "temperatura", "sudor", "hipotermia"): 
-        "Alerta en el termostato biológico. Tu temperatura está fuera del rango de los 37 grados Celsius. Aplica medios físicos (baño tibio o compresas) y mantén un flujo constante de líquidos. Monitorea la temperatura cada hora.",
-
-    ("sueño", "insomnio", "dormir", "cansancio", "fatiga", "agotado", "trasnocho", "energia"):
-        "Tus biometrías muestran un déficit severo en tus ciclos REM (Movimiento Ocular Rápido). Tu cerebro necesita purgar toxinas mediante el sueño. Aleja dispositivos electrónicos 45 minutos antes de dormir para no inhibir la melatonina.",
-
-    # --- CÓRTEX DE INTELIGENCIA EMOCIONAL (PROTOCOLO BAYMAX) ---
-    ("tristeza", "mal", "desanimado", "llorar", "ansiedad", "estres", "parcial", "examen", "deprimido", "angustia", "miedo", "solo", "soledad", "panico"): 
-        "Tus niveles hormonales muestran un pico de cortisol y un descenso crítico de serotonina. He activado los protocolos de estabilización emocional. Recuerda que llorar es una respuesta fisiológica natural y saludable para purgar el estrés. Estoy aquí para ti. ¿Deseas un abrazo o que inicie un tratamiento musical?"
+    ("cabeza", "migraña", "jaqueca", "sienes", "nuca", "cefalea", "cerebro", "mareo", "vertigo"): {
+        "preguntas": [
+            "¿El dolor es pulsante como latidos, o es una presión constante?",
+            "¿Tienes sensibilidad a la luz o al ruido?"
+        ],
+        "respuesta_base": "He detectado una anomalía neurológica. Reposo inmediato en área oscura, compresa fría en la frente e hidratación constante.",
+        "respuestas_detalle": {
+            "pulsante": "Los síntomas indican una migraña vascular. Evita pantallas y busca un ambiente oscuro y silencioso.",
+            "presion": "Parece una cefalea tensional. Aplica calor en el cuello y realiza respiraciones profundas.",
+            "luz": "La fotosensibilidad confirma migraña. Necesitas oscuridad total y reposo absoluto."
+        }
+    },
+    ("ojo", "ojos", "vista", "vision", "ardor ocular", "ceguera", "parpado"): {
+        "preguntas": [
+            "¿El malestar es en ambos ojos o solo en uno?",
+            "¿Tienes visión borrosa o solo irritación?"
+        ],
+        "respuesta_base": "Tus sensores oculares indican fatiga o irritación. Aplica la regla 20-20-20 y evita pantallas.",
+        "respuestas_detalle": {
+            "borrosa": "La visión borrosa puede indicar fatiga severa o tensión ocular. Si persiste más de 24 horas consulta un especialista.",
+            "irritacion": "Irritación ocular detectada. Lava con agua limpia y evita frotarte los ojos.",
+            "uno": "El malestar en un solo ojo puede indicar un cuerpo extraño o conjuntivitis. No lo frotes."
+        }
+    },
+    ("oido", "oidos", "oreja", "orejas", "zumbido", "sordera", "tinnitus"): {
+        "preguntas": [
+            "¿Escuchas un zumbido constante o sientes el oído tapado?",
+            "¿Tienes dolor punzante dentro del oído?"
+        ],
+        "respuesta_base": "Mis sensores detectan inflamación o bloqueo auditivo. No introduzcas objetos en el oído.",
+        "respuestas_detalle": {
+            "zumbido": "El tinnitus puede ser por exposición a ruidos fuertes. Reposo auditivo absoluto por 24 horas.",
+            "tapado": "Bloqueo del canal auditivo detectado. Puede ser cerumen acumulado. Un médico debe revisarlo.",
+            "dolor": "Dolor punzante indica posible otitis media. Requiere atención médica y posiblemente antibióticos."
+        }
+    },
+    ("diente", "dientes", "muela", "boca", "encias", "mandibula", "caries"): {
+        "preguntas": [
+            "¿El dolor es constante o solo al morder o tomar algo frío?",
+            "¿Tienes la encía inflamada o con sangrado?"
+        ],
+        "respuesta_base": "He detectado inflamación periodontal. Enjuague con agua tibia salina y agenda cita odontológica.",
+        "respuestas_detalle": {
+            "frio": "Sensibilidad al frío indica dentina expuesta o caries profunda. Evita alimentos fríos y ve al dentista.",
+            "constante": "Dolor constante puede ser una infección dental o absceso. Requiere atención odontológica urgente.",
+            "sangrado": "Sangrado de encías indica gingivitis. Mejora el cepillado y usa hilo dental diariamente."
+        }
+    },
+    ("pecho", "corazon", "taquicardia", "palpitacion", "arritmia", "infarto", "punzada en el pecho"): {
+        "preguntas": [
+            "¿El dolor se irradia hacia el brazo izquierdo o la mandíbula?",
+            "¿Tienes dificultad para respirar junto con el dolor?"
+        ],
+        "respuesta_base": "Alerta torácica. Detén toda actividad física y respira lento y profundo.",
+        "respuestas_detalle": {
+            "brazo": "ALERTA ROJA. Esto puede ser un infarto. Llama a emergencias inmediatamente y no te muevas.",
+            "mandibula": "ALERTA ROJA. Dolor irradiado a mandíbula es señal de emergencia cardíaca. Llama ya.",
+            "respirar": "Dificultad respiratoria con dolor pectoral es una emergencia. Busca atención médica ahora."
+        }
+    },
+    ("tos", "mocos", "garganta", "gripe", "gripa", "resfriado", "congestion", "flemas", "asma", "ahogo"): {
+        "preguntas": [
+            "¿Tienes fiebre junto con la tos?",
+            "¿La tos tiene flemas de color amarillo o verde?"
+        ],
+        "respuesta_base": "Diagnóstico respiratorio: posible infección viral. Reposo, líquidos tibios y vitamina C.",
+        "respuestas_detalle": {
+            "fiebre": "Tos con fiebre puede indicar influenza o bronquitis. Reposo absoluto y monitorea la temperatura.",
+            "amarillo": "Flemas amarillas o verdes indican infección bacteriana. Podrías necesitar antibióticos, consulta a un médico.",
+            "no": "Sin fiebre ni flemas, puede ser un resfriado común. Reposo e hidratación son suficientes."
+        }
+    },
+    ("estomago", "barriga", "panza", "nausea", "vomito", "colico", "abdomen", "indigestion", "diarrea", "gastritis"): {
+        "preguntas": [
+            "¿El dolor es en la parte superior o inferior del abdomen?",
+            "¿Tienes náuseas o has vomitado?"
+        ],
+        "respuesta_base": "Alteración gastrointestinal detectada. Dieta blanda y suero oral para evitar deshidratación.",
+        "respuestas_detalle": {
+            "superior": "Dolor en abdomen superior puede ser gastritis o reflujo. Evita comidas grasosas y ácidas.",
+            "inferior": "Dolor en abdomen inferior puede ser colon irritable o apendicitis. Si es muy intenso ve a urgencias.",
+            "vomito": "Vómitos activos detectados. Hidratación con sorbos pequeños frecuentes es prioritaria."
+        }
+    },
+    ("apendice", "apendicitis", "ombligo", "ingle"): {
+        "preguntas": [
+            "¿El dolor es constante en la parte inferior derecha del abdomen?",
+            "¿Tienes fiebre y náuseas junto con el dolor?"
+        ],
+        "respuesta_base": "Posible apendicitis. No tomes analgésicos y acude a urgencias.",
+        "respuestas_detalle": {
+            "derecha": "ALERTA AMARILLA. Dolor inferior derecho constante es señal clásica de apendicitis. Ve a urgencias ya.",
+            "fiebre": "Fiebre con dolor abdominal inferior es una combinación de alto riesgo. Atención médica inmediata."
+        }
+    },
+    ("cuello", "espalda", "lumbar", "columna", "cervical", "torticolis", "ciatica", "postura"): {
+        "preguntas": [
+            "¿El dolor baja hacia las piernas o se queda en la espalda?",
+            "¿El dolor empeoró después de levantar algo pesado o de estar sentado mucho tiempo?"
+        ],
+        "respuesta_base": "Tensión muscular dorsal crítica. Termoterapia 15 minutos y estiramientos controlados.",
+        "respuestas_detalle": {
+            "piernas": "Dolor que baja a piernas indica compresión del nervio ciático. Reposo y antiinflamatorio.",
+            "sentado": "Dolor por postura prolongada. Cada 30 minutos levántate y estira la espalda.",
+            "pesado": "Posible distensión muscular por esfuerzo. Hielo las primeras 24 horas, luego calor."
+        }
+    },
+    ("brazo", "brazos", "muñeca", "codo", "hombro", "mano", "dedo", "dedos", "antebrazo"): {
+        "preguntas": [
+            "¿Puedes mover el brazo con normalidad o el movimiento duele?",
+            "¿Hay inflamación visible o moretón en la zona?"
+        ],
+        "respuesta_base": "Daño tisular o articular detectado. Protocolo RICE: Reposo, Hielo, Compresión y Elevación.",
+        "respuestas_detalle": {
+            "no puedo": "Limitación de movimiento severa. Posible fractura o luxación. Inmoviliza y ve a urgencias.",
+            "inflamacion": "Inflamación visible confirma traumatismo. Hielo 10 minutos cada hora las primeras 24 horas.",
+            "moreton": "Hematoma detectado. Eleva el brazo por encima del corazón para reducir la hinchazón."
+        }
+    },
+    ("pierna", "piernas", "rodilla", "tobillo", "pie", "pies", "muslo", "gemelo", "calambre", "desgarre"): {
+        "preguntas": [
+            "¿Puedes apoyar el peso del cuerpo en la pierna afectada?",
+            "¿El dolor fue súbito como un chasquido o apareció gradualmente?"
+        ],
+        "respuesta_base": "Tensión en extremidades inferiores. Eleva la pierna, suspende actividad física.",
+        "respuestas_detalle": {
+            "no puedo": "Imposibilidad de apoyar peso puede indicar fractura. Inmoviliza y acude a urgencias.",
+            "chasquido": "Sonido al lesionarse indica posible rotura de ligamento. Requiere evaluación médica urgente.",
+            "gradual": "Dolor gradual indica sobrecarga muscular. Reposo 48 horas y antiinflamatorio tópico."
+        }
+    },
+    ("golpe", "caida", "caída", "hueso", "herida", "moreton", "esguince", "corte", "fractura"): {
+        "preguntas": [
+            "¿Hay herida abierta con sangrado activo?",
+            "¿Sientes entumecimiento o hormigueo en la zona?"
+        ],
+        "respuesta_base": "Traumatismo físico confirmado. Si hay sangrado aplica presión constante con apósito limpio.",
+        "respuestas_detalle": {
+            "sangrado": "Sangrado activo: presión directa constante por al menos 10 minutos sin levantar el apósito.",
+            "hormigueo": "Hormigueo post-traumático puede indicar daño nervioso. Requiere evaluación médica.",
+            "no": "Sin complicaciones aparentes. Protocolo RICE y monitoreo de la zona durante 24 horas."
+        }
+    },
+    ("piel", "alergia", "picazon", "sarpullido", "ronchas", "quemadura", "ardor", "picadura"): {
+        "preguntas": [
+            "¿La reacción apareció después de comer algo o de contacto con alguna sustancia?",
+            "¿Las ronchas se están expandiendo rápidamente?"
+        ],
+        "respuesta_base": "Reacción dérmica detectada. Lava con agua y jabón de pH neutro. No te rasques.",
+        "respuestas_detalle": {
+            "comida": "Posible alergia alimentaria. Evita ese alimento y consulta a un alergólogo.",
+            "expandiendo": "ALERTA: Reacción que se expande puede ser anafilaxia. Busca atención médica inmediata.",
+            "picadura": "Picadura de insecto: lava la zona, aplica hielo y antihistamínico si tienes."
+        }
+    },
+    ("fiebre", "escalofrio", "caliente", "temperatura", "sudor", "hipotermia"): {
+        "preguntas": [
+            "¿Cuántos grados tienes de temperatura?",
+            "¿La fiebre lleva más de 24 horas?"
+        ],
+        "respuesta_base": "Temperatura fuera del rango normal. Baño tibio, compresas y líquidos constantes.",
+        "respuestas_detalle": {
+            "39": "Fiebre alta detectada. Si supera 39.5 grados requiere atención médica urgente.",
+            "40": "ALERTA ROJA. Temperatura crítica. Ve a urgencias inmediatamente.",
+            "24 horas": "Fiebre persistente más de 24 horas requiere evaluación médica para descartar infección grave."
+        }
+    },
+    ("sueño", "insomnio", "dormir", "cansancio", "fatiga", "agotado", "trasnocho", "energia"): {
+        "preguntas": [
+            "¿Llevas más de 2 días sin dormir bien?",
+            "¿El cansancio es físico, mental o los dos?"
+        ],
+        "respuesta_base": "Déficit severo en ciclos REM detectado. Aleja dispositivos 45 minutos antes de dormir.",
+        "respuestas_detalle": {
+            "dos dias": "Insomnio crónico detectado. Establece un horario fijo de sueño y evita cafeína después del mediodía.",
+            "mental": "Fatiga mental indica sobrecarga cognitiva. Técnicas de meditación y pausas de 10 minutos cada hora.",
+            "fisico": "Fatiga física indica recuperación insuficiente. 8 horas de sueño y nutrición adecuada son prioritarias."
+        }
+    },
+    ("tristeza", "mal", "desanimado", "llorar", "ansiedad", "estres", "deprimido", "angustia", "miedo", "solo", "soledad", "panico"): {
+        "preguntas": [
+            "¿Este sentimiento lleva más de una semana?",
+            "¿Hay algo específico que lo esté causando?"
+        ],
+        "respuesta_base": "Pico de cortisol y descenso de serotonina detectados. Estoy aquí para ti. Llorar es completamente normal.",
+        "respuestas_detalle": {
+            "semana": "Tristeza prolongada más de una semana puede indicar depresión. Hablar con un profesional puede ayudarte mucho.",
+            "si": "Identificar la causa es el primer paso. ¿Quieres contarme más sobre lo que está pasando?",
+            "no": "A veces el cuerpo acumula estrés sin razón aparente. Ejercicio suave y contacto social son tu mejor medicina."
+        }
+    }
 }
 
-# ------------------------------------------------------------------------------
-# 3. MOTOR DE DIAGNÓSTICO E INFERENCIA MÉDICA
-# ------------------------------------------------------------------------------
 def evaluar_triage(sintoma: str) -> str:
-    """
-    INNOVACIÓN: Evalúa la gravedad del síntoma antes de dar el diagnóstico.
-    Añade una advertencia extra si el problema es de vida o muerte.
-    """
     for palabra_roja in SINTOMAS_CRITICOS_ROJOS:
         if palabra_roja in sintoma:
             return "🔴 ALERTA ROJA: Este síntoma representa un riesgo vital. "
-            
     for palabra_amarilla in SINTOMAS_CUIDADO_AMARILLO:
         if palabra_amarilla in sintoma:
             return "🟡 ADVERTENCIA: Este cuadro requiere monitoreo cuidadoso. "
-            
-    return "" # Nivel verde (sin prefijo de alerta)
+    return ""
 
 def generar_respuesta_medica(sintoma_detectado: str):
-    """
-    El corazón del diagnóstico. Busca de manera profunda en las matrices
-    y genera una respuesta clínica profesional combinada con el nivel de Triage.
-    """
     if not sintoma_detectado:
-        return "Mis escáneres están en línea, pero no lograron aislar el área afectada. Por favor, repite la zona donde sientes el malestar."
-
+        return "No logré aislar el área afectada. ¿Puedes repetir dónde sientes el malestar?"
     sintoma = sintoma_detectado.lower().strip()
-    
-    # Obtenemos la advertencia de Triage (si la hay)
     alerta_triage = evaluar_triage(sintoma)
-    
-    # 1. Búsqueda de Precisión (Coincidencia exacta de término en la matriz)
-    for grupo_sinonimos, respuesta_medica in PROTOCOLOS_MAESTROS.items():
+    for grupo_sinonimos, protocolo in PROTOCOLOS_MAESTROS.items():
         if sintoma in grupo_sinonimos:
-            return alerta_triage + respuesta_medica
-            
-        # 2. Búsqueda Profunda (Sub-cadenas: ej. "el brazo izquierdo")
+            return alerta_triage + protocolo["respuesta_base"]
         for sinonimo in grupo_sinonimos:
-            # Si el alias de nuestra base de datos está mencionado por el paciente
             if sinonimo in sintoma:
-                return alerta_triage + respuesta_medica
+                return alerta_triage + protocolo["respuesta_base"]
+    return "He registrado tu malestar. El protocolo estándar indica reposo preventivo y monitoreo de signos vitales."
 
-    # 3. Protocolo de Redundancia (Fallback)
-    # Se activa si el paciente menciona algo extremadamente raro (ej: "bazo", "tibia")
-    return "He registrado tu malestar anatómico. Aunque el área es inusual, el protocolo estándar indica que debes mantener reposo preventivo y monitorear tus signos vitales. Actualizaré mi base de datos en mi próximo ciclo de carga."
+def obtener_pregunta_seguimiento(sintoma_detectado: str, indice: int) -> str:
+    """Retorna la pregunta de seguimiento según el síntoma e índice."""
+    sintoma = sintoma_detectado.lower().strip()
+    for grupo_sinonimos, protocolo in PROTOCOLOS_MAESTROS.items():
+        encontrado = sintoma in grupo_sinonimos or any(s in sintoma for s in grupo_sinonimos)
+        if encontrado:
+            preguntas = protocolo.get("preguntas", [])
+            if indice < len(preguntas):
+                return preguntas[indice]
+    return None
 
-# ==============================================================================
-# FIN DEL MÓDULO DE TRATAMIENTO
-# ==============================================================================
+def obtener_respuesta_detalle(sintoma_detectado: str, respuesta_paciente: str) -> str:
+    """Busca una respuesta específica según lo que dijo el paciente."""
+    sintoma = sintoma_detectado.lower().strip()
+    for grupo_sinonimos, protocolo in PROTOCOLOS_MAESTROS.items():
+        encontrado = sintoma in grupo_sinonimos or any(s in sintoma for s in grupo_sinonimos)
+        if encontrado:
+            detalles = protocolo.get("respuestas_detalle", {})
+            for clave, respuesta in detalles.items():
+                if clave in respuesta_paciente:
+                    return respuesta
+    return None

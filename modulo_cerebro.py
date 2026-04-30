@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 # Importamos la base de datos de tratamientos y el sistema de memoria persistente.
 # El cerebro depende de que estos módulos existan para funcionar al 100%.
 try:
-    from tratamiento import generar_respuesta_medica, PROTOCOLOS_MAESTROS
+    from tratamiento import generar_respuesta_medica, obtener_pregunta_seguimiento, obtener_respuesta_detalle, PROTOCOLOS_MAESTROS
     from modulo_memoria import actualizar_historial_temas, guardar_perfil
 except ImportError as e:
     print(f"❌ [CEREBRO - ERROR DE ENLACE]: No se pudo localizar un módulo vital: {e}")
@@ -36,6 +36,8 @@ class EstadoSesion:
     
     # --- Variables de Diagnóstico Médico ---
     esperando_escala: bool = False
+    esperando_seguimiento: bool = False
+    indice_pregunta: int = 0
     sintoma_actual: str = "NINGUNO"
     categoria_actual: str = "GENERAL"  # Crucial para el reporte .txt
     nivel_dolor: int = 0
@@ -141,7 +143,7 @@ def extraer_escala_dolor(texto: str) -> int:
 
 def identificar_patologia(texto_norm: str):
     """
-    Ahora usa dos niveles de búsqueda:
+    Niveles de búsqueda:
     1. Exacta: busca la palabra directamente (rápido)
     2. Semántica: usa spaCy para entender sinónimos y conjugaciones
        Ejemplo: "doliendo" → "doler" → encuentra "dolor"
@@ -304,36 +306,78 @@ def procesar_pensamiento(texto_bruto: str, estado: EstadoSesion, perfil: dict):
             "cerrar": False
         }
 
-    # --- FASE E: PROTOCOLO MÉDICO Y ESCALA DE DOLOR ---
-    # Lógica de captura de nivel si ya detectamos un síntoma previamente
+# --- FASE E: PROTOCOLO MÉDICO Y ESCALA DE DOLOR ---
+    if estado.esperando_seguimiento:
+        # Buscamos si la respuesta del paciente coincide con algún detalle
+        respuesta_detalle = obtener_respuesta_detalle(estado.sintoma_actual, texto_norm)
+        
+        # Intentamos la siguiente pregunta de seguimiento
+        siguiente_pregunta = obtener_pregunta_seguimiento(
+            estado.sintoma_actual, 
+            estado.indice_pregunta
+        )
+        
+        if respuesta_detalle:
+            # Tenemos una respuesta específica, la damos y seguimos con más preguntas
+            estado.indice_pregunta += 1
+            proxima = obtener_pregunta_seguimiento(estado.sintoma_actual, estado.indice_pregunta)
+            if proxima:
+                return {
+                    "id": "seguimiento",
+                    "texto": f"{respuesta_detalle} Además, {proxima}",
+                    "estado": estado,
+                    "cerrar": False
+                }
+            else:
+                estado.esperando_seguimiento = False
+                estado.esperando_escala = True
+                return {
+                    "id": "seguimiento_final",
+                    "texto": f"{respuesta_detalle} En una escala del uno al diez, ¿cómo calificarías tu dolor?",
+                    "estado": estado,
+                    "cerrar": False
+                }
+        elif siguiente_pregunta:
+            estado.indice_pregunta += 1
+            return {
+                "id": "seguimiento",
+                "texto": siguiente_pregunta,
+                "estado": estado,
+                "cerrar": False
+            }
+        else:
+            estado.esperando_seguimiento = False
+            estado.esperando_escala = True
+            return {
+                "id": "pedir_escala",
+                "texto": "En una escala del uno al diez, ¿cómo calificarías tu dolor?",
+                "estado": estado,
+                "cerrar": False
+            }
+
     if estado.esperando_escala:
         nivel = extraer_escala_dolor(texto_norm)
         if nivel is not None:
             estado.nivel_dolor = nivel
             estado.esperando_escala = False
-            
-            # Reacción cinematográfica a nivel bajo (Pubertad)
             if nivel <= 1:
                 return {
-                    "id": "pubertad", 
-                    "texto": "Escaneo completo. No sufrió lesión alguna. Su malestar es propio de su edad y de cambios hormonales naturales.", 
-                    "estado": estado, 
+                    "id": "pubertad",
+                    "texto": "Escaneo completo. No sufrió lesión alguna. Su malestar es propio de cambios naturales.",
+                    "estado": estado,
                     "cerrar": False
                 }
-            
-            # Diagnóstico basado en tratamiento.py
             consejo = generar_respuesta_medica(estado.sintoma_actual)
             return {
-                "id": "consejo_medico", 
-                "texto": f"He registrado un nivel de dolor de {nivel}. {consejo}", 
-                "estado": estado, 
+                "id": "consejo_medico",
+                "texto": f"He registrado un nivel de dolor de {nivel}. {consejo}",
+                "estado": estado,
                 "cerrar": False
             }
-        
         return {
-            "id": "re_escala", 
-            "texto": "Por favor, indique un valor numérico del uno al diez para calificar su dolor.", 
-            "estado": estado, 
+            "id": "re_escala",
+            "texto": "Por favor indica un valor del uno al diez para calificar tu dolor.",
+            "estado": estado,
             "cerrar": False
         }
 
@@ -342,7 +386,8 @@ def procesar_pensamiento(texto_bruto: str, estado: EstadoSesion, perfil: dict):
     if sintoma:
         estado.sintoma_actual = sintoma
         estado.categoria_actual = categoria  # <--- GUARDADO PARA EL REPORTE FINAL
-        estado.esperando_escala = True      # Activamos la captura de escala en el siguiente turno
+        estado.esperando_seguimiento = True
+        estado.indice_pregunta = 0
         
         # Persistencia en el perfil JSON del usuario
         perfil["ultimo_sintoma"] = sintoma
