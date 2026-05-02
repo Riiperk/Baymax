@@ -111,7 +111,7 @@ PATRONES_PELICULA = [
 # Clasificador de emociones
 MAPA_EMOCIONES = {
     "ANSIEDAD": ["miedo", "asustado", "preocupado", "nervioso", "ansiedad", "estres", "panico", "asustada"],
-    "TRISTEZA": ["triste", "mal", "desanimado", "cansado", "deprimido", "solo", "soledad", "llorar", "lagrimas"],
+    "TRISTEZA": ["triste", "mal", "desanimado", "cansado", "deprimido", "solo", "soledad", "llorar", "lagrimas", "horrible", "fatal", "pesimo", "terrible", "destrozado"],
     "ALEGRIA": ["feliz", "bien", "excelente", "emocionado", "contento", "genial", "super", "alegre"],
     "DOLOR": ["duele", "dolor", "anomalia", "golpe", "herida", "punzada", "quemazon"]
 }
@@ -252,7 +252,50 @@ def consultar_ollama(prompt_usuario: str, estado: EstadoSesion, perfil: dict) ->
     except Exception as e:
         print(f"⚠️ [CEREBRO - OLLAMA]: {e}")
         return ""
-
+    
+def clasificar_intencion(texto: str) -> dict:
+    """
+    Usa Qwen para entender la intención del paciente antes de procesar.
+    Retorna un diccionario con la intención y el síntoma inferido.
+    Ejemplo: "no puedo ni caminar" → {"intencion": "sintoma", "sintoma_inferido": "pierna"}
+    """
+    url = "http://localhost:11434/api/generate"
+    
+    prompt = (
+        "Eres un clasificador médico. Analiza la frase del paciente y responde SOLO con un JSON.\n"
+        "Las intenciones posibles son: sintoma, emocion, charla, musica, cierre.\n"
+        "Si es sintoma, indica qué parte del cuerpo o qué malestar.\n"
+        "Ejemplos:\n"
+        "'me duele horrible la cabeza' → {\"intencion\": \"sintoma\", \"sintoma_inferido\": \"cabeza\"}\n"
+        "'no puedo ni caminar' → {\"intencion\": \"sintoma\", \"sintoma_inferido\": \"pierna\"}\n"
+        "'me siento muy triste' → {\"intencion\": \"emocion\", \"sintoma_inferido\": \"tristeza\"}\n"
+        "'pon musica relajante' → {\"intencion\": \"musica\", \"sintoma_inferido\": \"\"}\n"
+        "'estoy bien gracias' → {\"intencion\": \"charla\", \"sintoma_inferido\": \"\"}\n"
+        f"Frase: '{texto}'\n"
+        "JSON:"
+    )
+    
+    try:
+        payload = {
+            "model": "qwen2.5:3b",
+            "prompt": prompt,
+            "stream": False,
+            "options": {"temperature": 0.1, "num_predict": 60}
+        }
+        res = requests.post(url, json=payload, timeout=30)
+        respuesta = res.json().get("response", "").strip()
+        
+        # Extraemos el JSON de la respuesta
+        import json
+        inicio = respuesta.find("{")
+        fin = respuesta.rfind("}") + 1
+        if inicio >= 0 and fin > inicio:
+            datos = json.loads(respuesta[inicio:fin])
+            return datos
+    except Exception as e:
+        print(f"⚠️ [INTENCIÓN]: {e}")
+    
+    return {"intencion": "charla", "sintoma_inferido": ""}
 # ==============================================================================
 # 6. CÓRTEX DE DECISIÓN PRINCIPAL
 # ==============================================================================
@@ -473,6 +516,16 @@ def procesar_pensamiento(texto_bruto: str, estado: EstadoSesion, perfil: dict):
 
     # --- FASE F: DETECCIÓN DE NUEVAS ANOMALÍAS ---
     sintoma, categoria = identificar_patologia(texto_norm)
+    
+    # Si no encontramos síntoma con búsqueda directa, usamos Qwen para inferirlo
+    if not sintoma:
+        intencion_data = clasificar_intencion(texto_entrada)
+        intencion = intencion_data.get("intencion", "charla")
+        sintoma_inferido = intencion_data.get("sintoma_inferido", "").lower()
+        
+        if intencion == "sintoma" and sintoma_inferido:
+            # Buscamos el síntoma inferido en nuestra base de datos
+            sintoma, categoria = identificar_patologia(sintoma_inferido)
     if sintoma:
         estado.sintoma_actual = sintoma
         estado.categoria_actual = categoria

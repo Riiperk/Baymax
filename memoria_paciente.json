@@ -1,17 +1,17 @@
 {
     "nombre": "Paciente",
-    "ultimo_sintoma": "estomago",
+    "ultimo_sintoma": "pierna",
     "temas_hablados": [
-        "interesante",
-        "puedes",
-        "hacer",
-        "hola",
         "noooo",
         "estas",
         "algo",
         "cuentame",
         "parece",
-        "tomahawk"
+        "tomahawk",
+        "puedo",
+        "caminar",
+        "siento",
+        "horrible"
     ],
-    "sesiones_completadas": 21
+    "sesiones_completadas": 22
 }
