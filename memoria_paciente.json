@@ -1,9 +1,7 @@
 {
     "nombre": "Paciente",
-    "ultimo_sintoma": "abdomen",
+    "ultimo_sintoma": "estomago",
     "temas_hablados": [
-        "siento",
-        "bien",
         "interesante",
         "puedes",
         "hacer",
@@ -11,7 +9,9 @@
         "noooo",
         "estas",
         "algo",
-        "cuentame"
+        "cuentame",
+        "parece",
+        "tomahawk"
     ],
-    "sesiones_completadas": 20
+    "sesiones_completadas": 21
 }

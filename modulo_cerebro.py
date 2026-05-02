@@ -6,6 +6,7 @@ import requests
 import time
 import random
 import spacy
+from rapidfuzz import fuzz
 from dataclasses import dataclass, field
 
 nlp = spacy.load("es_core_news_md")
@@ -180,6 +181,30 @@ def identificar_patologia(texto_norm: str):
             lemas_sin = [token.lemma_ for token in doc_sin]
             if any(lema in lemas_texto for lema in lemas_sin):
                 return sinonimo, grupo_sinonimos[0].upper()
+
+    # Nivel 3: fuzzy matching (nuevo)
+    # Detecta palabras mal pronunciadas o transcritas por Whisper
+    # Ejemplo: "cabesa" → "cabeza", "superio" → "superior"
+    from rapidfuzz import fuzz
+    palabras_texto = texto_norm.split()
+    mejor_sintoma = None
+    mejor_score = 0
+    mejor_grupo = None
+
+    for grupo_sinonimos in PROTOCOLOS_MAESTROS.keys():
+        for sinonimo in grupo_sinonimos:
+            for palabra in palabras_texto:
+                # Solo comparamos palabras de longitud similar para evitar falsos positivos
+                if abs(len(palabra) - len(sinonimo)) <= 3:
+                    score = fuzz.ratio(palabra, sinonimo)
+                    if score > mejor_score and score >= 80:
+                        mejor_score = score
+                        mejor_sintoma = sinonimo
+                        mejor_grupo = grupo_sinonimos
+
+    if mejor_sintoma:
+        print(f"   [ 🔍 FUZZY ]: '{mejor_sintoma}' detectado con {mejor_score}% de similitud")
+        return mejor_sintoma, mejor_grupo[0].upper()
 
     return None, None
 
