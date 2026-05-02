@@ -109,12 +109,11 @@ def arrancar_bayx():
     time.sleep(1.5) 
     
     # --- FASE 3: SECUENCIA DE SALUDO CINEMATOGRÁFICA ---
-    if perfil_paciente.get("ultimo_sintoma") != "Ninguno":
-        # Saludo basado en la memoria persistente del archivo .json
-        saludo_persistente = f"Hola de nuevo. En mi último escaneo registré una anomalía en tu {perfil_paciente['ultimo_sintoma']}. ¿Cómo te sientes el día de hoy?"
-        vocalizar_bayx(saludo_persistente, estado)
+    from modulo_memoria import generar_saludo_inteligente
+    saludo = generar_saludo_inteligente(perfil_paciente)
+    if saludo:
+        vocalizar_bayx(saludo, estado)
     else:
-        # Saludo estándar icónico de la película
         vocalizar_bayx("Hola, yo soy Bayx, tu asistente médico personal.", estado)
         time.sleep(0.5)
         vocalizar_bayx("Escuché un sonido de angustia. ¿Tienes algún problema?", estado)
