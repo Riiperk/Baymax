@@ -6,6 +6,25 @@ import requests
 import time
 import random
 import spacy
+# Importamos el modelo neuronal entrenado
+import torch
+import json
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+
+# Cargamos el modelo de Bayx
+print("🧠 [CEREBRO]: Cargando red neuronal médica...")
+try:
+    RUTA_MODELO_NN = "modelo_bayx"
+    tokenizer_nn = AutoTokenizer.from_pretrained(RUTA_MODELO_NN)
+    modelo_nn = AutoModelForSequenceClassification.from_pretrained(RUTA_MODELO_NN)
+    modelo_nn.eval()
+    with open(f"{RUTA_MODELO_NN}/categorias.json", "r") as f:
+        categorias_nn = json.load(f)
+    print("✅ [CEREBRO]: Red neuronal médica lista.")
+except Exception as e:
+    print(f"⚠️ [CEREBRO]: Red neuronal no disponible: {e}")
+    modelo_nn = None
+    categorias_nn = {}
 from rapidfuzz import fuzz
 from dataclasses import dataclass, field
 
@@ -164,6 +183,38 @@ def extraer_escala_dolor(texto: str):
     encontrados.extend(digitos)
     return max(encontrados) if encontrados else None
 
+def diagnosticar_con_red_neuronal(texto: str) -> tuple:
+    if modelo_nn is None:
+        return None, None
+
+    try:
+        inputs = tokenizer_nn(
+            texto,
+            return_tensors="pt",
+            truncation=True,
+            padding=True,
+            max_length=64
+        )
+
+        with torch.no_grad():
+            outputs = modelo_nn(**inputs)
+
+        probabilidades = torch.softmax(outputs.logits, dim=-1)
+        confianza = probabilidades.max().item()
+        indice = outputs.logits.argmax().item()
+        categoria = categorias_nn.get(str(indice), None)
+
+        print(f"   [ 🧠 RED NEURONAL ]: {categoria} ({confianza*100:.1f}% confianza)")
+
+        if confianza >= 0.85 and categoria:
+            return categoria, categoria.upper()
+
+        return None, None
+
+    except Exception as e:
+        print(f"⚠️ [RED NEURONAL]: {e}")
+        return None, None
+    
 def identificar_patologia(texto_norm: str):
     # Nivel 1: búsqueda exacta
     for grupo_sinonimos in PROTOCOLOS_MAESTROS.keys():
@@ -209,11 +260,27 @@ def identificar_patologia(texto_norm: str):
     return None, None
 
 def construir_intro_sintoma(sintoma: str) -> str:
-    """Genera una introducción natural según si es parte del cuerpo o sensación."""
-    if sintoma in PARTES_CUERPO:
-        return f"He detectado una anomalía en tu {sintoma}."
+    # Traducciones para que suene más natural
+    traducciones = {
+        "sueno": "sueño y fatiga",
+        "respiratorio": "sistema respiratorio",
+        "emocional": "estado emocional",
+        "piel": "la piel",
+        "fiebre": "la temperatura corporal",
+        "espalda": "la espalda",
+        "estomago": "el estómago",
+        "pecho": "el pecho",
+        "cabeza": "la cabeza",
+        "brazo": "el brazo",
+        "pierna": "la pierna"
+    }
+    
+    nombre = traducciones.get(sintoma, sintoma)
+    
+    if sintoma in PARTES_CUERPO or sintoma in traducciones:
+        return f"He detectado una anomalía en {nombre}."
     else:
-        return f"He registrado el siguiente síntoma: {sintoma}."
+        return f"He registrado el siguiente síntoma: {nombre}."
 
 # ==============================================================================
 # 5. INTEGRACIÓN CON OLLAMA (QWEN2.5)
@@ -515,7 +582,10 @@ def procesar_pensamiento(texto_bruto: str, estado: EstadoSesion, perfil: dict):
         }
 
     # --- FASE F: DETECCIÓN DE NUEVAS ANOMALÍAS ---
-    sintoma, categoria = identificar_patologia(texto_norm)
+    sintoma, categoria = diagnosticar_con_red_neuronal(texto_norm)
+    
+    if not sintoma:
+        sintoma, categoria = identificar_patologia(texto_norm)
     
     # Si no encontramos síntoma con búsqueda directa, usamos Qwen para inferirlo
     if not sintoma:

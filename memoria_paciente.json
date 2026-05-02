@@ -1,22 +1,53 @@
 {
     "nombre": "Paciente",
-    "sesiones_completadas": 23,
+    "sesiones_completadas": 34,
     "fecha_primera_sesion": "2026-05-01",
     "ultima_sesion": "2026-05-01",
-    "historial_sintomas": [],
-    "sintomas_frecuentes": {},
-    "ultimo_sintoma": "mal",
+    "historial_sintomas": [
+        {
+            "sintoma": "respiratorio",
+            "fecha": "2026-05-01",
+            "nivel_dolor": 0
+        },
+        {
+            "sintoma": "sueno",
+            "fecha": "2026-05-01",
+            "nivel_dolor": 0
+        }
+    ],
+    "sintomas_frecuentes": {
+        "respiratorio": 1,
+        "sueno": 1
+    },
+    "ultimo_sintoma": "pierna",
     "historial_emociones": [
         {
             "emocion": "TRISTEZA",
             "fecha": "2026-05-01"
+        },
+        {
+            "emocion": "ALEGRIA",
+            "fecha": "2026-05-01"
+        },
+        {
+            "emocion": "TRISTEZA",
+            "fecha": "2026-05-01"
+        },
+        {
+            "emocion": "ANSIEDAD",
+            "fecha": "2026-05-01"
         }
     ],
     "emocion_frecuente": "NEUTRAL",
-    "temas_hablados": [],
+    "temas_hablados": [
+        "bienvenido",
+        "mejor",
+        "estas",
+        "gracias"
+    ],
     "patrones": {
         "sintoma_recurrente": null,
-        "emocion_recurrente": null,
+        "emocion_recurrente": "TRISTEZA",
         "sesiones_este_mes": 0
     }
 }

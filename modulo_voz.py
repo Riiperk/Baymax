@@ -1,18 +1,21 @@
 # ==============================================================================
-# MODULO_VOZ.PY - SUBSISTEMA DE SALIDA ACÚSTICA BAYX (V21.0 - NEURAL)
+# MODULO_VOZ.PY - SUBSISTEMA DE SALIDA ACÚSTICA BAYX (V22.1 - EDGE-TTS)
 # ==============================================================================
 import pygame
 import edge_tts
 import asyncio
-import io
 import os
 import time
 import sys
 import random
 
-# Voz neuronal colombiana masculina, la más cercana a Baymax
-# Otras opciones: "es-MX-JorgeNeural", "es-ES-AlvaroNeural"
-VOZ_BAYX = "es-CO-GonzaloNeural"
+# Voz + ajustes para sonar como Baymax:
+# - Voz masculina Jorge (México) - más grave y calmada
+# - Rate -15%: más lento y pausado como Baymax
+# - Pitch -10Hz: más grave y robótico
+VOZ_BAYX = "es-MX-JorgeNeural"
+RATE = "-10%"
+PITCH = "+0Hz"
 
 # ==============================================================================
 # 1. INICIALIZACIÓN DEL MOTOR DE AUDIO
@@ -41,12 +44,7 @@ if not os.path.exists(CARPETA_CACHE):
 # 2. MOTOR DE SÍNTESIS NEURAL (edge-tts)
 # ==============================================================================
 async def generar_audio_async(texto: str) -> bytes:
-    """
-    Genera el audio de forma asíncrona con edge-tts.
-    Asíncrono significa que Python puede hacer otras cosas mientras
-    espera que lleguen los datos de audio, en lugar de quedarse bloqueado.
-    """
-    comunicar = edge_tts.Communicate(texto, VOZ_BAYX, rate="-10%")
+    comunicar = edge_tts.Communicate(texto, VOZ_BAYX, rate=RATE, pitch=PITCH)
     audio_bytes = b""
     async for chunk in comunicar.stream():
         if chunk["type"] == "audio":
@@ -54,7 +52,6 @@ async def generar_audio_async(texto: str) -> bytes:
     return audio_bytes
 
 def generar_audio(texto: str) -> bytes:
-    """Puente entre el código normal y el código asíncrono."""
     return asyncio.run(generar_audio_async(texto))
 
 # ==============================================================================
@@ -123,7 +120,10 @@ def hablar(texto: str, emocion: str = "neutral") -> None:
         print("   [ 🎙️ Sintetizando voz neural... ]")
         audio_bytes = generar_audio(texto_limpio)
 
-        # Nombre único para evitar conflictos con pygame
+        if not audio_bytes:
+            print("❌ [VOZ]: No se generó audio.")
+            return
+
         ruta_temp = os.path.join(CARPETA_CACHE, f"temp_{int(time.time()*1000)}.mp3")
         with open(ruta_temp, "wb") as f:
             f.write(audio_bytes)
@@ -139,7 +139,7 @@ def hablar(texto: str, emocion: str = "neutral") -> None:
         while pygame.mixer.music.get_busy():
             time.sleep(0.1)
 
-        # Borramos archivos temporales viejos para no llenar el disco
+        # Limpiamos temporales viejos
         for archivo in os.listdir(CARPETA_CACHE):
             if archivo.startswith("temp_") and archivo != os.path.basename(ruta_temp):
                 try:
